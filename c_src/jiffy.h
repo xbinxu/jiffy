@@ -29,6 +29,7 @@ typedef struct {
     ERL_NIF_TERM    atom_iter;
     ERL_NIF_TERM    atom_bytes_per_iter;
     ERL_NIF_TERM    atom_return_maps;
+    ERL_NIF_TERM    atom_atomize_map_key;
     ERL_NIF_TERM    atom_return_trailer;
     ERL_NIF_TERM    atom_has_trailer;
     ERL_NIF_TERM    atom_nil;
@@ -44,6 +45,7 @@ typedef struct {
 } jiffy_st;
 
 ERL_NIF_TERM make_atom(ErlNifEnv* env, const char* name);
+ERL_NIF_TERM make_atom_len(ErlNifEnv* env, const char* name, size_t len);
 ERL_NIF_TERM make_ok(jiffy_st* st, ErlNifEnv* env, ERL_NIF_TERM data);
 ERL_NIF_TERM make_error(jiffy_st* st, ErlNifEnv* env, const char* error);
 ERL_NIF_TERM make_obj_error(jiffy_st* st, ErlNifEnv* env, const char* error,

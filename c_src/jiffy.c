@@ -26,6 +26,7 @@ load(ErlNifEnv* env, void** priv, ERL_NIF_TERM info)
     st->atom_iter = make_atom(env, "iter");
     st->atom_bytes_per_iter = make_atom(env, "bytes_per_iter");
     st->atom_return_maps = make_atom(env, "return_maps");
+    st->atom_atomize_map_key = make_atom(env, "atomize_map_key");
     st->atom_return_trailer = make_atom(env, "return_trailer");
     st->atom_has_trailer = make_atom(env, "has_trailer");
     st->atom_nil = make_atom(env, "nil");

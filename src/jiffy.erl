@@ -37,6 +37,7 @@
                         | {has_trailer, json_value(), binary()}.
 
 -type decode_option() :: return_maps
+                        | atomize_map_key
                         | use_nil
                         | return_trailer
                         | {null_term, any()}

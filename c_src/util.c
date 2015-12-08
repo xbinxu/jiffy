@@ -15,6 +15,16 @@ make_atom(ErlNifEnv* env, const char* name)
 }
 
 ERL_NIF_TERM
+make_atom_len(ErlNifEnv* env, const char* name, size_t len)
+{
+    ERL_NIF_TERM ret;
+    if(enif_make_existing_atom_len(env, name, len, &ret, ERL_NIF_LATIN1)) {
+        return ret;
+    }
+    return enif_make_atom_len(env, name, len);
+}
+
+ERL_NIF_TERM
 make_ok(jiffy_st* st, ErlNifEnv* env, ERL_NIF_TERM value)
 {
     return enif_make_tuple2(env, st->atom_ok, value);

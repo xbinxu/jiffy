@@ -52,6 +52,7 @@ typedef struct {
     size_t          bytes_per_red;
     int             is_partial;
     int             return_maps;
+    int             atomize_map_key;
     int             return_trailer;
     ERL_NIF_TERM    null_term;
 
@@ -81,6 +82,7 @@ dec_new(ErlNifEnv* env)
     d->bytes_per_red = DEFAULT_BYTES_PER_REDUCTION;
     d->is_partial = 0;
     d->return_maps = 0;
+    d->atomize_map_key = 0;
     d->return_trailer = 0;
     d->null_term = d->atoms->atom_null;
 
@@ -624,7 +626,26 @@ make_empty_object(ErlNifEnv* env, int ret_map)
 }
 
 int
-make_object(ErlNifEnv* env, ERL_NIF_TERM pairs, ERL_NIF_TERM* out, int ret_map)
+is_atom_string(ErlNifBinary* bin) 
+{
+    if (bin->size == 0 || bin->size > 255) {
+        return 0;
+    }
+
+    char c;
+    for (int i=0; i < bin->size; i++) {
+        c = bin->data[i];
+        if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '@' || c == '_' || c == '-')
+            continue;
+        else 
+            return 0;
+    }
+
+    return 1;
+}
+
+int
+make_object(ErlNifEnv* env, ERL_NIF_TERM pairs, ERL_NIF_TERM* out, int ret_map, int atomize_map_key)
 {
     ERL_NIF_TERM ret;
     ERL_NIF_TERM key;
@@ -634,9 +655,25 @@ make_object(ErlNifEnv* env, ERL_NIF_TERM pairs, ERL_NIF_TERM* out, int ret_map)
     if(ret_map) {
         ret = enif_make_new_map(env);
         while(enif_get_list_cell(env, pairs, &val, &pairs)) {
-            if(!enif_get_list_cell(env, pairs, &key, &pairs)) {
+            if (!enif_get_list_cell(env, pairs, &key, &pairs)) {
                 assert(0 == 1 && "Unbalanced object pairs.");
             }
+
+            if (atomize_map_key && enif_is_binary(env, key)) {
+                if (enif_is_binary(env, key)) {
+                    ErlNifBinary bin;
+                    if (enif_inspect_binary(env, key, &bin)) {
+                        if (is_atom_string(&bin)) {
+                            key = make_atom_len(env, (char *)bin.data, bin.size);
+                        }
+                    }
+                    else {
+                        return 0;
+                    }
+                }
+
+            }
+
             if(!enif_make_map_put(env, ret, key, val, &ret)) {
                 return 0;
             }
@@ -714,7 +751,14 @@ decode_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 #else
             return enif_make_badarg(env);
 #endif
-        } else if(enif_compare(val, d->atoms->atom_return_trailer) == 0) {
+        } else if(enif_compare(val, d->atoms->atom_atomize_map_key) == 0) {
+#if MAP_TYPE_PRESENT
+            d->atomize_map_key = 1;
+#else
+            return enif_make_badarg(env);
+#endif            
+        }
+        else if(enif_compare(val, d->atoms->atom_return_trailer) == 0) {
             d->return_trailer = 1;
         } else if(enif_compare(val, d->atoms->atom_use_nil) == 0) {
             d->null_term = d->atoms->atom_nil;
@@ -984,7 +1028,7 @@ decode_iter(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
                         }
                         dec_pop(d, st_object);
                         dec_pop(d, st_value);
-                        if(!make_object(env, curr, &val, d->return_maps)) {
+                        if(!make_object(env, curr, &val, d->return_maps, d->atomize_map_key)) {
                             ret = dec_error(d, "internal_object_error");
                             goto done;
                         }
